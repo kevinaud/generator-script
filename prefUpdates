@@ -1,0 +1,256 @@
+#!/usr/bin/env python
+from sys import argv
+import time
+from os.path import expanduser
+from os.path import exists
+from os import makedirs
+
+import preferences.templates as templates
+import preferences.placeholders as ph
+from preferences.util import *
+
+""" GET USER INPUT """
+
+# get preference name
+pref = raw_input("Please enter the name of the preference (all lower case, spaces between each word): ")
+
+# get table name 
+tableName = raw_input("Enter the name of the database table for the preference: ")
+
+# get name of auther
+author = raw_input("Author: ")
+
+# get value property
+print ("")
+print('Define the VALUE field (id column) for this preference: ')
+valueField = getNextField()
+
+# get label property
+print ("")
+print('Define the LABEL field (human readable column) for this preference: ')
+labelField = getNextField()
+
+additionalFields = getAdditionalFields()
+
+fields = [ valueField, labelField ]
+fields = fields + additionalFields
+loggableFields = getLoggableFields(fields)
+
+""" CONVERT TO CAMEL CASE AND UPPER CAMEL CASE """
+camelCase = ""
+upperCamelCase = ""
+lowerCasePrefName = ""
+titleCasePrefName = ""
+
+firstPass = True
+prefArgs = pref.split()
+for arg in prefArgs:
+    chars = list(arg)
+    chars[0] = chars[0].upper()
+
+    if firstPass:
+        camelCase = camelCase + arg
+        titleCasePrefName = ''.join(chars)
+        lowerCasePrefName = arg
+        firstPass = False
+    else:
+        titleCasePrefName = titleCasePrefName + ' ' + ''.join(chars)
+        lowerCasePrefName = lowerCasePrefName + ' ' + arg
+        camelCase = camelCase + ''.join(chars)
+
+    upperCamelCase = upperCamelCase + ''.join(chars)
+
+# get todays date
+today = time.strftime("%Y-%m-%d")
+
+labelPropTitleChars = list(labelField.name)
+labelPropTitleChars[0] = labelPropTitleChars[0].upper()
+labelPropTitle = ''.join(labelPropTitleChars)
+    
+singularPrefNameTitle = titleCasePrefName
+
+if titleCasePrefName[-1:] == 's' :
+    singularPrefNameTitle = singularPrefNameTitle[:-1]
+
+placeholderDictionary = {
+    ph.AUTHOR: author,
+    ph.TODAY: today,
+    ph.CAMEL: camelCase,
+    ph.UPPER_CAMEL: upperCamelCase,
+    ph.PREF_NAME_TITLE: titleCasePrefName,
+    ph.SINGULAR_PREF_NAME_TITLE: singularPrefNameTitle,
+    ph.PREF_NAME_LOWER: lowerCasePrefName,
+    ph.TABLE: tableName,
+    ph.LABEL_PROP: labelField.name,
+    ph.LABEL_PROP_TITLE: labelPropTitle,
+    ph.VALUE_PROP: valueField.name,
+    ph.LOGGABLE_FIELDS: fieldsToArrayString(loggableFields, 2, True, False),
+    ph.DB_FIELDS_ARRAY: fieldsToArrayString(fields, 2, False, False),
+    ph.COMMENTED_OUT_FIELDS: fieldsToArrayString(fields, 1, True, True),
+    ph.FIELDS_PUBLIC_ATTRIBUTES: fieldsToPublicAttributesString(fields),
+    ph.SELECT_QRY: fieldsToSelectQuery(fields, lowerCasePrefName, tableName)
+}
+
+controller = ph.processTemplate(templates.controllerTemplate, placeholderDictionary)
+action = ph.processTemplate(templates.actionTemplate, placeholderDictionary)
+dao = ph.processTemplate(templates.daoTemplate, placeholderDictionary)
+view = ph.processTemplate(templates.viewTemplate, placeholderDictionary)
+router = ph.processTemplate(templates.routerTemplate, placeholderDictionary)
+
+itemComponentTemplate = ph.processTemplate(templates.itemComponentTemplate, placeholderDictionary)
+prefComponentTemplate = ph.processTemplate(templates.prefComponentTemplate, placeholderDictionary)
+
+homeDir = expanduser("~")
+
+base = homeDir + '/pestroutes/resources/components/settings/preferences/'
+
+itemFileLoc = base + camelCase + 'Item.html'
+itemComponent = appendOriginal(itemComponentTemplate, itemFileLoc)
+
+prefFileLoc = base + camelCase + 'Template.html'
+prefComponent = appendOriginal(prefComponentTemplate, prefFileLoc)
+
+viewDelegate = updatePreferenceViewDelegate(lowerCasePrefName, homeDir)
+preferenceDelegate = updatePreferenceDelegate(lowerCasePrefName, homeDir)
+
+""" print("")
+print("PREFERENCE CONTROLLER")
+print("")
+
+print(controller)
+
+print("")
+print("")
+raw_input("press enter to continue")
+
+print("")
+print("PREFERENCE ACTION")
+print("")
+
+print(action)
+
+print("")
+print("")
+raw_input("press enter to continue")
+
+print("")
+print("PREFERENCE VIEW")
+print("")
+
+print(view)
+
+print("")
+print("")
+raw_input("press enter to continue")
+
+print("")
+print("PREFERENCE DAO")
+print("")
+
+print(dao)
+
+print("")
+print("")
+raw_input("press enter to continue")
+
+print("")
+print("PREFERENCE ROUTER")
+print("")
+
+print(router)
+
+print("")
+print("")
+raw_input("press enter to continue")
+
+print("")
+print("PREFERENCE TEMPLATE COMPONENT")
+print("")
+
+print(prefComponent)
+
+print("")
+print("")
+raw_input("press enter to continue")
+
+print("")
+print("PREFERENCE ITEM COMPONENT")
+print("")
+
+print(itemComponent)
+
+print("")
+print("")
+raw_input("press enter to continue") """
+
+""" MAKE DIRECTORIES """
+classDir = homeDir + '/pestroutes/resources/classes/'
+
+# make MVC directory
+if not exists(classDir + upperCamelCase):
+    makedirs(classDir + upperCamelCase)
+
+# make Controller directory
+if not exists(classDir + upperCamelCase + '/Controller'):
+    makedirs(classDir + upperCamelCase + '/Controller')
+
+# make Action directory
+if not exists(classDir + upperCamelCase + '/Action'):
+    makedirs(classDir + upperCamelCase + '/Action')
+
+# make DAO directory
+if not exists(classDir + upperCamelCase + '/DAO'):
+    makedirs(classDir + upperCamelCase + '/DAO')
+
+# make View directory
+if not exists(classDir + upperCamelCase + '/View'):
+    makedirs(classDir + upperCamelCase + '/View')
+
+base = homeDir + '/pestroutes/resources'
+
+controllerLoc = base + '/classes/' + upperCamelCase + '/Controller/' + upperCamelCase + 'Controller.php'
+viewLoc = base + '/classes/' + upperCamelCase + '/View/'  + upperCamelCase + 'View.php'
+actionLoc = base + '/classes/' + upperCamelCase + '/Action/'  + upperCamelCase + 'Action.php'
+daoLoc = base + '/classes/' + upperCamelCase + '/DAO/'  + upperCamelCase + 'DAO.php'
+
+routerLoc = base + '/routers/' + camelCase + 'Router.php'
+
+viewDelegateLoc = base + '/delegates/settings/preferencesViewDelegate.php'
+preferenceDelegateLoc = base + '/delegates/settings/preferencesDelegate.php'
+
+itemComponentLoc = base + '/components/settings/preferences/' + camelCase + 'Item.html'  
+prefComponentLoc = base + '/components/settings/preferences/' + camelCase + 'Template.html' 
+
+
+writeToFile(controllerLoc, controller)
+writeToFile(viewLoc, view)
+writeToFile(actionLoc, action)
+writeToFile(daoLoc, dao)
+writeToFile(routerLoc, router)
+writeToFile(viewDelegateLoc, viewDelegate)
+writeToFile(preferenceDelegateLoc, preferenceDelegate)
+writeToFile(itemComponentLoc, itemComponent)
+writeToFile(prefComponentLoc, prefComponent)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

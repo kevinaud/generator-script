@@ -1,0 +1,14 @@
+<div class = 'preferenceFilterWrapper'>
+    {{{filterHead}}}
+</div>
+<div class = 'clear cleanStyleList preferenceList'> 
+    <input class="grayInput preferenceSearch left" placeholder="Search...">
+    <div class = 'greenGradientBG grayButton addPrefListButton'>+ __singular__title__pref__name__</div>
+    <div class = 'clear' id = 'preferenceHeader'>
+        <div class = 'oneQuarter prefListHeader'>__label__title__prop__</div>
+    </div>
+    {{#items}}
+        <prtmpl>settings/preferences/__camel__case__Item.html</prtmpl>
+    {{/items}}
+</div>
+
